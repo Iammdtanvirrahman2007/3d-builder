@@ -18,13 +18,7 @@
   <header class="topbar">
     <div class="brand"><span class="cube">◇</span><span>3D Builder</span></div>
     <nav class="menus" aria-label="Main menu">
-      <button data-menu="file">File</button>
-      <button data-menu="edit">Edit</button>
-      <button data-menu="view">View</button>
-      <button data-menu="object">Object</button>
-      <button data-menu="insert">Insert</button>
-      <button data-menu="tools">Tools</button>
-      <button data-menu="help">Help</button>
+      <button data-menu="file">File</button><button data-menu="edit">Edit</button><button data-menu="view">View</button><button data-menu="object">Object</button><button data-menu="insert">Insert</button><button data-menu="tools">Tools</button><button data-menu="help">Help</button>
     </nav>
     <div class="top-actions"><button id="undoBtn" title="Undo">↶</button><button id="redoBtn" title="Redo">↷</button><button id="saveBtn">Save</button></div>
   </header>
@@ -35,22 +29,16 @@
 
   <main class="app">
     <aside class="sidebar left">
-      <section class="panel-section">
-        <div class="section-title">Objects</div>
+      <section class="panel-section objects-section">
+        <div class="section-title">Scene Objects</div>
         <div id="objectList" class="object-list"><div class="empty">No objects yet</div></div>
       </section>
       <section class="panel-section transform-section">
         <div class="section-title">Transform</div>
-        <div class="transform-grid">
-          <label>X <input id="posX" type="number" step="0.1" value="0"></label>
-          <label>Y <input id="posY" type="number" step="0.1" value="0"></label>
-          <label>Z <input id="posZ" type="number" step="0.1" value="0"></label>
-          <label>RX <input id="rotX" type="number" step="1" value="0"></label>
-          <label>RY <input id="rotY" type="number" step="1" value="0"></label>
-          <label>RZ <input id="rotZ" type="number" step="1" value="0"></label>
-          <label>SX <input id="scaleX" type="number" step="0.1" value="1"></label>
-          <label>SY <input id="scaleY" type="number" step="0.1" value="1"></label>
-          <label>SZ <input id="scaleZ" type="number" step="0.1" value="1"></label>
+        <div class="transform-block">
+          <div class="transform-row"><span class="transform-label">Position</span><div class="axis-fields"><label>X<input id="posX" type="number" step="0.1" value="0"></label><label>Y<input id="posY" type="number" step="0.1" value="0"></label><label>Z<input id="posZ" type="number" step="0.1" value="0"></label></div></div>
+          <div class="transform-row"><span class="transform-label">Rotation</span><div class="axis-fields"><label>X<input id="rotX" type="number" step="1" value="0"></label><label>Y<input id="rotY" type="number" step="1" value="0"></label><label>Z<input id="rotZ" type="number" step="1" value="0"></label></div></div>
+          <div class="transform-row"><span class="transform-label">Scale</span><div class="axis-fields"><label>X<input id="scaleX" type="number" step="0.1" value="1"></label><label>Y<input id="scaleY" type="number" step="0.1" value="1"></label><label>Z<input id="scaleZ" type="number" step="0.1" value="1"></label></div></div>
         </div>
       </section>
     </aside>
@@ -58,17 +46,11 @@
     <section class="viewport-wrap">
       <div id="viewport" class="viewport"></div>
       <div class="toolbar">
-        <button class="tool active" data-tool="select">↖ Select</button>
-        <button class="tool" data-tool="move">✥ Move</button>
-        <button class="tool" data-tool="rotate">⟳ Rotate</button>
-        <button class="tool" data-tool="scale">↗ Scale</button>
-        <span id="scaleOptions" class="scale-options hidden">
-          <button id="mirrorBtn" class="tool option-btn" type="button">Mirror: Off</button>
-          <button id="uniformBtn" class="tool option-btn" type="button">Uniform: Off</button>
-        </span>
-        <span class="divider"></span>
-        <button id="frameBtn" class="tool">⌗ Frame</button>
-        <button id="gridBtn" class="tool">▦ Grid</button>
+        <div class="tool-group main-tools">
+          <button class="tool active" data-tool="select">↖ Select</button><button class="tool" data-tool="move">✥ Move</button><button class="tool" data-tool="rotate">⟳ Rotate</button><button class="tool" data-tool="scale">↗ Scale</button>
+        </div>
+        <span id="scaleOptions" class="scale-options hidden"><button id="mirrorBtn" class="tool option-btn" type="button">Mirror: Off</button><button id="uniformBtn" class="tool option-btn" type="button">Uniform: Off</button></span>
+        <span class="divider"></span><button id="frameBtn" class="tool utility-tool">⌗ Frame</button><button id="gridBtn" class="tool utility-tool">▦ Grid</button>
       </div>
       <div class="status"><span id="statusText">Ready</span><span>Perspective</span></div>
     </section>
@@ -78,13 +60,14 @@
         <div class="section-title">Properties</div>
         <div id="properties" class="properties"><div class="empty">Select an object</div></div>
       </section>
-      <section class="panel-section">
+      <section class="panel-section appearance-section">
+        <div class="section-title">Appearance</div>
+        <div class="color-control"><div><span class="color-title">Object Color</span><span class="color-subtitle">Material</span></div><label class="color-picker"><input id="colorInput" type="color" value="#9aa3ad"><span class="color-swatch"></span></label></div>
+        <div class="color-presets"><button data-color="#9aa3ad" title="Gray"></button><button data-color="#5b8def" title="Blue"></button><button data-color="#62b779" title="Green"></button><button data-color="#e6b35a" title="Gold"></button><button data-color="#d66b78" title="Red"></button><button data-color="#a477d4" title="Purple"></button></div>
+      </section>
+      <section class="panel-section quick-section">
         <div class="section-title">Quick Add</div>
-        <div class="quick-grid">
-          <button data-add="box">▣ Box</button><button data-add="sphere">● Sphere</button>
-          <button data-add="cylinder">⬢ Cylinder</button><button data-add="cone">△ Cone</button>
-          <button data-add="torus">◎ Torus</button><button data-add="plane">□ Plane</button>
-        </div>
+        <div class="quick-grid"><button data-add="box">▣ Box</button><button data-add="sphere">● Sphere</button><button data-add="cylinder">⬢ Cylinder</button><button data-add="cone">△ Cone</button><button data-add="torus">◎ Torus</button><button data-add="plane">□ Plane</button></div>
       </section>
     </aside>
   </main>
