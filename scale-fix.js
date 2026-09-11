@@ -2,10 +2,11 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.m
 import { TransformControls } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/TransformControls.js';
 
 /*
-  Scale-side correction layer.
-  The editor's main scale handler keeps the dragged face centered by default.
-  This layer detects which visible scale handle side was grabbed and corrects
-  the center offset so Mirror OFF keeps the opposite face fixed.
+  Transform gizmo fixes.
+  1. Keep all six axis handles visible even when part of the gizmo is behind
+     the selected mesh. This matches a modeling-editor gizmo rather than a
+     normal scene object.
+  2. Keep the scale-side correction used by the editor's Mirror/Uniform modes.
 */
 
 const state = new WeakMap();
@@ -45,30 +46,46 @@ function getHandleSide(control,event,object,axis){
   const hit=hits.find(h=>h.object?.visible && h.object?.name?.includes(axis));
   if(!hit)return 1;
 
-  // Transform the picked point into the object's local space. This works even
-  // when TransformControls visually flips the handle because it is behind the camera.
   const p=hit.point.clone();
   object.worldToLocal(p);
   const value=p[axis.toLowerCase()];
   return value<0?-1:1;
 }
 
+function fixGizmoVisibility(control){
+  const helper=control.getHelper?.();
+  if(!helper)return;
+
+  helper.traverse(node=>{
+    if(!node.material)return;
+    const materials=Array.isArray(node.material)?node.material:[node.material];
+    materials.forEach(material=>{
+      // Gizmo handles are editor controls, not scene geometry. They must stay
+      // visible when their shafts pass through the selected object.
+      material.depthTest=false;
+      material.depthWrite=false;
+      material.transparent=material.transparent||false;
+    });
+    node.renderOrder=10000;
+  });
+}
+
 function setup(control){
   if(state.has(control))return;
   const s={drag:null};
   state.set(control,s);
+  fixGizmoVisibility(control);
 
   control.addEventListener('mouseDown',()=>{
+    fixGizmoVisibility(control);
     if(control.getMode()!=='scale'||!control.object)return;
-    // The DOM pointer event is captured below. mouseDown only resets stale state.
     s.drag=null;
   });
 
   control.domElement.addEventListener('pointerdown',event=>{
+    fixGizmoVisibility(control);
     if(control.getMode()!=='scale'||!control.object||event.button!==0)return;
 
-    // TransformControls handles its own pointerdown listener first, so axis is
-    // already known here.
     const axis=axisKey(control.axis);
     if(!axis)return;
 
@@ -85,6 +102,7 @@ function setup(control){
   });
 
   control.addEventListener('objectChange',()=>{
+    fixGizmoVisibility(control);
     const d=s.drag;
     if(!d||control.getMode()!=='scale'||control.object!==d.object)return;
 
@@ -93,7 +111,6 @@ function setup(control){
     const o=d.object;
 
     if(mirror){
-      // Mirror ON: keep the original center fixed.
       o.position.copy(d.startPosition);
       return;
     }
@@ -111,17 +128,19 @@ function setup(control){
     o.position.copy(d.startPosition).add(shift);
   });
 
-  control.addEventListener('mouseUp',()=>{s.drag=null});
+  control.addEventListener('mouseUp',()=>{s.drag=null;fixGizmoVisibility(control)});
 }
 
 TransformControls.prototype.setMode=function(mode){
   const result=originalSetMode.call(this,mode);
   setup(this);
+  fixGizmoVisibility(this);
   return result;
 };
 
 TransformControls.prototype.attach=function(object){
   const result=originalAttach.call(this,object);
   setup(this);
+  fixGizmoVisibility(this);
   return result;
 };
