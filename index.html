@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Builder</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="cube">◇</span><span>3D Builder</span></div>
+    <nav class="menus" aria-label="Main menu">
+      <button data-menu="file">File</button>
+      <button data-menu="edit">Edit</button>
+      <button data-menu="view">View</button>
+      <button data-menu="object">Object</button>
+      <button data-menu="insert">Insert</button>
+      <button data-menu="tools">Tools</button>
+      <button data-menu="help">Help</button>
+    </nav>
+    <div class="top-actions"><button id="undoBtn" title="Undo">↶</button><button id="redoBtn" title="Redo">↷</button><button id="saveBtn">Save</button></div>
+  </header>
+
+  <div id="menuPanel" class="menu-panel hidden"></div>
+
+  <main class="app">
+    <aside class="sidebar left">
+      <section class="panel-section">
+        <div class="section-title">Objects</div>
+        <div id="objectList" class="object-list"><div class="empty">No objects yet</div></div>
+      </section>
+      <section class="panel-section transform-section">
+        <div class="section-title">Transform</div>
+        <div class="transform-grid">
+          <label>X <input id="posX" type="number" step="0.1" value="0"></label>
+          <label>Y <input id="posY" type="number" step="0.1" value="0"></label>
+          <label>Z <input id="posZ" type="number" step="0.1" value="0"></label>
+          <label>RX <input id="rotX" type="number" step="1" value="0"></label>
+          <label>RY <input id="rotY" type="number" step="1" value="0"></label>
+          <label>RZ <input id="rotZ" type="number" step="1" value="0"></label>
+          <label>SX <input id="scaleX" type="number" step="0.1" value="1"></label>
+          <label>SY <input id="scaleY" type="number" step="0.1" value="1"></label>
+          <label>SZ <input id="scaleZ" type="number" step="0.1" value="1"></label>
+        </div>
+      </section>
+    </aside>
+
+    <section class="viewport-wrap">
+      <div id="viewport" class="viewport"></div>
+      <div class="toolbar">
+        <button class="tool active" data-tool="select">↖ Select</button>
+        <button class="tool" data-tool="move">✥ Move</button>
+        <button class="tool" data-tool="rotate">⟳ Rotate</button>
+        <button class="tool" data-tool="scale">↗ Scale</button>
+        <span class="divider"></span>
+        <button id="frameBtn" class="tool">⌗ Frame</button>
+        <button id="gridBtn" class="tool">▦ Grid</button>
+      </div>
+      <div class="status"><span id="statusText">Ready</span><span>Perspective</span></div>
+    </section>
+
+    <aside class="sidebar right">
+      <section class="panel-section">
+        <div class="section-title">Properties</div>
+        <div id="properties" class="properties"><div class="empty">Select an object</div></div>
+      </section>
+      <section class="panel-section">
+        <div class="section-title">Quick Add</div>
+        <div class="quick-grid">
+          <button data-add="box">▣ Box</button><button data-add="sphere">● Sphere</button>
+          <button data-add="cylinder">⬢ Cylinder</button><button data-add="cone">△ Cone</button>
+          <button data-add="torus">◎ Torus</button><button data-add="plane">□ Plane</button>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
