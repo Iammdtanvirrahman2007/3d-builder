@@ -53,8 +53,12 @@
       <section class="panel-section"><div class="section-title">Properties</div><div id="properties" class="properties"><div class="empty">Select an object</div></div></section>
       <section class="panel-section appearance-section">
         <div class="section-title">Appearance</div>
-        <div class="color-control"><div><span class="color-title">Object Color</span><span class="color-subtitle">Material</span></div><label class="color-picker"><input id="colorInput" type="color" value="#9aa3ad"><span class="color-swatch"></span></label></div>
-        <div class="color-presets"><button data-color="#9aa3ad" title="Gray"></button><button data-color="#5b8def" title="Blue"></button><button data-color="#62b779" title="Green"></button><button data-color="#e6b35a" title="Gold"></button><button data-color="#d66b78" title="Red"></button><button data-color="#a477d4" title="Purple"></button></div>
+        <div class="color-control"><div><span class="color-title">Object Color</span><span class="color-subtitle">Material</span></div><button id="colorButton" class="color-picker" type="button" aria-label="Choose object color"><span class="color-swatch"></span></button></div>
+        <div id="colorPanel" class="color-panel hidden">
+          <div class="color-panel-head"><span>Color</span><button id="closeColorBtn" type="button">×</button></div>
+          <div class="color-presets"><button data-color="#9aa3ad" title="Gray"></button><button data-color="#5b8def" title="Blue"></button><button data-color="#62b779" title="Green"></button><button data-color="#e6b35a" title="Gold"></button><button data-color="#d66b78" title="Red"></button><button data-color="#a477d4" title="Purple"></button></div>
+          <label class="hex-color"><span>HEX</span><input id="colorInput" type="text" value="#9aa3ad" maxlength="7" spellcheck="false"></label>
+        </div>
       </section>
       <section class="panel-section quick-section"><div class="section-title">Quick Add</div><div class="quick-grid"><button data-add="box">▣ Box</button><button data-add="sphere">● Sphere</button><button data-add="cylinder">⬢ Cylinder</button><button data-add="cone">△ Cone</button><button data-add="torus">◎ Torus</button><button data-add="plane">□ Plane</button></div></section>
     </aside>
