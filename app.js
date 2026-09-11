@@ -3,41 +3,220 @@ import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/exampl
 import { TransformControls } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/TransformControls.js';
 
 const viewport=document.querySelector('#viewport');
-const scene=new THREE.Scene(); scene.background=new THREE.Color(0x101215);
-const camera=new THREE.PerspectiveCamera(55,1,.01,500); camera.position.set(7,6,9);
-const renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(viewport.clientWidth,viewport.clientHeight); renderer.shadowMap.enabled=true; viewport.appendChild(renderer.domElement);
-const orbit=new OrbitControls(camera,renderer.domElement); orbit.enableDamping=true; orbit.target.set(0,1,0);
-const transform=new TransformControls(camera,renderer.domElement); scene.add(transform.getHelper());
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x101215);
+const camera=new THREE.PerspectiveCamera(55,1,.01,500);
+camera.position.set(7,6,9);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(viewport.clientWidth,viewport.clientHeight);
+renderer.shadowMap.enabled=true;
+viewport.appendChild(renderer.domElement);
+const orbit=new OrbitControls(camera,renderer.domElement);
+orbit.enableDamping=true; orbit.target.set(0,1,0);
+const transform=new TransformControls(camera,renderer.domElement);
+scene.add(transform.getHelper());
 const hemi=new THREE.HemisphereLight(0xffffff,0x30343b,2.2); scene.add(hemi);
 const key=new THREE.DirectionalLight(0xffffff,2.8); key.position.set(6,10,7); key.castShadow=true; scene.add(key);
 const grid=new THREE.GridHelper(20,20,0x555b63,0x292d33); scene.add(grid);
 const axes=new THREE.AxesHelper(2.5); scene.add(axes);
-const objects=[]; let selected=null; let history=[]; let future=[];
-const menuData={file:['New','Open…','Save','Save As…','Import 3D model…','Export','Print 3D'],edit:['Undo','Redo','Duplicate','Delete','Select All','Clear Selection'],view:['Home View','Top View','Front View','Right View','Perspective','Orthographic','Grid','Axes'],object:['Group','Ungroup','Combine','Subtract','Intersect','Split','Mirror'],insert:['Box','Sphere','Cylinder','Cone','Torus','Plane','Text','Image','Custom Mesh'],tools:['Measure','Align','Center','Smooth','Simplify','Repair','Material','Settings'],help:['Keyboard Shortcuts','Documentation','About 3D Builder']};
+
+const objects=[];
+let selected=null;
+let selectedSet=new Set();
+let history=[];
+let historyIndex=-1;
+let restoring=false;
+
+const menuData={
+ file:['New','Open…','Save','Save As…','Import 3D model…','Export','Print 3D'],
+ edit:['Undo','Redo','Duplicate','Delete','Select All','Clear Selection'],
+ view:['Home View','Top View','Front View','Right View','Perspective','Orthographic','Grid','Axes'],
+ object:['Group','Ungroup','Combine','Subtract','Intersect','Split','Mirror'],
+ insert:['Box','Sphere','Cylinder','Cone','Torus','Plane','Text','Image','Custom Mesh'],
+ tools:['Measure','Align','Center','Smooth','Simplify','Repair','Material','Settings'],
+ help:['Keyboard Shortcuts','Documentation','About 3D Builder']
+};
 const menuPanel=document.querySelector('#menuPanel');
 
-document.querySelectorAll('.menus button').forEach((b)=>b.addEventListener('click',(e)=>{const items=menuData[b.dataset.menu]; menuPanel.innerHTML=items.map((x,i)=>`<div class="menu-item" data-action="${x}">${x}</div>${[6,8,13].includes(i)?'<div class="menu-sep"></div>':''}`).join(''); menuPanel.style.left=b.getBoundingClientRect().left+'px'; menuPanel.classList.toggle('hidden'); menuPanel.querySelectorAll('.menu-item').forEach(item=>item.onclick=()=>runMenu(item.dataset.action));}));
-document.addEventListener('click',(e)=>{if(!e.target.closest('.menus')&&!e.target.closest('#menuPanel'))menuPanel.classList.add('hidden')});
+document.querySelectorAll('.menus button').forEach(b=>b.addEventListener('click',()=>{
+ const items=menuData[b.dataset.menu];
+ menuPanel.innerHTML=items.map((x,i)=>`<div class="menu-item" data-action="${x}">${x}</div>${[6,8,13].includes(i)?'<div class="menu-sep"></div>':''}`).join('');
+ menuPanel.style.left=b.getBoundingClientRect().left+'px';
+ menuPanel.classList.toggle('hidden');
+ menuPanel.querySelectorAll('.menu-item').forEach(item=>item.onclick=()=>runMenu(item.dataset.action));
+}));
+document.addEventListener('click',e=>{if(!e.target.closest('.menus')&&!e.target.closest('#menuPanel'))menuPanel.classList.add('hidden')});
 
-function geometryFor(type){switch(type){case'box':return new THREE.BoxGeometry(2,2,2);case'sphere':return new THREE.SphereGeometry(1.15,40,24);case'cylinder':return new THREE.CylinderGeometry(1,1,2,40);case'cone':return new THREE.ConeGeometry(1.15,2.2,40);case'torus':return new THREE.TorusGeometry(.8,.28,18,48);case'plane':return new THREE.PlaneGeometry(2.5,2.5);default:return new THREE.BoxGeometry(2,2,2)}}
-function addObject(type){const mat=new THREE.MeshStandardMaterial({color:0x9aa3ad,roughness:.55,metalness:.08}); const mesh=new THREE.Mesh(geometryFor(type),mat); mesh.castShadow=true; mesh.receiveShadow=true; mesh.position.y=type==='plane'?0:1; mesh.name=type[0].toUpperCase()+type.slice(1)+' '+(objects.length+1); scene.add(mesh); objects.push(mesh); select(mesh); pushHistory(); updateList(); status('Added '+mesh.name);}
-function select(obj){selected=obj||null; transform.detach(); if(obj){transform.attach(obj); updateInputs();} updateList(); updateProperties();}
-function updateList(){const el=document.querySelector('#objectList'); el.innerHTML=objects.length?objects.map((o,i)=>`<div class="object-item ${o===selected?'selected':''}" data-index="${i}"><span>◇ ${o.name}</span><span>${o.visible?'':'hidden'}</span></div>`).join(''):'<div class="empty">No objects yet</div>'; el.querySelectorAll('.object-item').forEach(x=>x.onclick=()=>select(objects[+x.dataset.index]));}
-function updateProperties(){const el=document.querySelector('#properties'); if(!selected){el.innerHTML='<div class="empty">Select an object</div>';return} el.innerHTML=`<div class="prop-row"><span>Name</span><strong>${selected.name}</strong></div><div class="prop-row"><span>Type</span><strong>${selected.geometry.type}</strong></div><div class="prop-row"><span>Vertices</span><strong>${selected.geometry.attributes.position.count}</strong></div><div class="prop-row"><span>Visible</span><strong>${selected.visible?'Yes':'No'}</strong></div>`;}
-function updateInputs(){if(!selected)return;[['posX',selected.position.x],['posY',selected.position.y],['posZ',selected.position.z],['rotX',THREE.MathUtils.radToDeg(selected.rotation.x)],['rotY',THREE.MathUtils.radToDeg(selected.rotation.y)],['rotZ',THREE.MathUtils.radToDeg(selected.rotation.z)],['scaleX',selected.scale.x],['scaleY',selected.scale.y],['scaleZ',selected.scale.z]].forEach(([id,v])=>document.getElementById(id).value=Number(v).toFixed(2));}
-['posX','posY','posZ','rotX','rotY','rotZ','scaleX','scaleY','scaleZ'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{if(!selected)return; const v=+document.getElementById(id).value; if(id.startsWith('pos'))selected.position[id[3].toLowerCase()]=v; else if(id.startsWith('rot'))selected.rotation[id[3].toLowerCase()]=THREE.MathUtils.degToRad(v); else selected.scale[id[5].toLowerCase()]=v; pushHistory(); updateProperties();}));
-transform.addEventListener('dragging-changed',e=>orbit.enabled=!e.value); transform.addEventListener('objectChange',()=>{updateInputs();updateProperties();});
+function geometryFor(type){
+ switch(type){
+  case'box':return new THREE.BoxGeometry(2,2,2);
+  case'sphere':return new THREE.SphereGeometry(1.15,40,24);
+  case'cylinder':return new THREE.CylinderGeometry(1,1,2,40);
+  case'cone':return new THREE.ConeGeometry(1.15,2.2,40);
+  case'torus':return new THREE.TorusGeometry(.8,.28,18,48);
+  case'plane':return new THREE.PlaneGeometry(2.5,2.5);
+  default:return new THREE.BoxGeometry(2,2,2);
+ }
+}
+function materialFor(color=0x9aa3ad){return new THREE.MeshStandardMaterial({color,roughness:.55,metalness:.08});}
+function typeFromGeometry(g){
+ const t=g.type.toLowerCase();
+ if(t.includes('box'))return'box'; if(t.includes('sphere'))return'sphere'; if(t.includes('cylinder'))return'cylinder';
+ if(t.includes('cone'))return'cone'; if(t.includes('torus'))return'torus'; if(t.includes('plane'))return'plane';
+ return'box';
+}
+function addObject(type,recordHistory=true){
+ const mesh=new THREE.Mesh(geometryFor(type),materialFor());
+ mesh.castShadow=true; mesh.receiveShadow=true;
+ mesh.position.y=type==='plane'?0:1;
+ mesh.name=type[0].toUpperCase()+type.slice(1)+' '+(objects.length+1);
+ scene.add(mesh); objects.push(mesh); select(mesh);
+ if(recordHistory)commitHistory();
+ updateList(); status('Added '+mesh.name);
+ return mesh;
+}
+function select(obj){
+ selectedSet.clear();
+ if(obj)selectedSet.add(obj);
+ selected=obj||null;
+ transform.detach();
+ if(obj)transform.attach(obj);
+ updateInputs(); updateList(); updateProperties();
+}
+function selectMany(list){
+ selectedSet=new Set(list.filter(Boolean));
+ selected=selectedSet.size===1?[...selectedSet][0]:null;
+ transform.detach();
+ if(selected)transform.attach(selected);
+ updateInputs(); updateList(); updateProperties();
+}
+function updateList(){
+ const el=document.querySelector('#objectList');
+ el.innerHTML=objects.length?objects.map((o,i)=>`<div class="object-item ${selectedSet.has(o)?'selected':''}" data-index="${i}"><span>◇ ${o.name}</span><span>${o.visible?'':'hidden'}</span></div>`).join(''):'<div class="empty">No objects yet</div>';
+ el.querySelectorAll('.object-item').forEach(x=>x.onclick=e=>{
+  const o=objects[+x.dataset.index];
+  if(e.ctrlKey||e.metaKey){const s=new Set(selectedSet);s.has(o)?s.delete(o):s.add(o);selectMany([...s]);}
+  else select(o);
+ });
+}
+function updateProperties(){
+ const el=document.querySelector('#properties');
+ if(selectedSet.size>1){el.innerHTML=`<div class="prop-row"><span>Selected</span><strong>${selectedSet.size} objects</strong></div>`;return;}
+ if(!selected){el.innerHTML='<div class="empty">Select an object</div>';return}
+ el.innerHTML=`<div class="prop-row"><span>Name</span><strong>${selected.name}</strong></div><div class="prop-row"><span>Type</span><strong>${selected.geometry.type}</strong></div><div class="prop-row"><span>Vertices</span><strong>${selected.geometry.attributes.position.count}</strong></div><div class="prop-row"><span>Visible</span><strong>${selected.visible?'Yes':'No'}</strong></div>`;
+}
+function updateInputs(){
+ if(!selected)return;
+ [['posX',selected.position.x],['posY',selected.position.y],['posZ',selected.position.z],['rotX',THREE.MathUtils.radToDeg(selected.rotation.x)],['rotY',THREE.MathUtils.radToDeg(selected.rotation.y)],['rotZ',THREE.MathUtils.radToDeg(selected.rotation.z)],['scaleX',selected.scale.x],['scaleY',selected.scale.y],['scaleZ',selected.scale.z]].forEach(([id,v])=>document.getElementById(id).value=Number(v).toFixed(2));
+}
+['posX','posY','posZ','rotX','rotY','rotZ','scaleX','scaleY','scaleZ'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{
+ if(!selected)return;
+ const v=+document.getElementById(id).value;
+ if(id.startsWith('pos'))selected.position[id[3].toLowerCase()]=v;
+ else if(id.startsWith('rot'))selected.rotation[id[3].toLowerCase()]=THREE.MathUtils.degToRad(v);
+ else selected.scale[id[5].toLowerCase()]=v;
+ commitHistory(); updateProperties();
+}));
+transform.addEventListener('dragging-changed',e=>orbit.enabled=!e.value);
+transform.addEventListener('objectChange',()=>{updateInputs();updateProperties()});
+transform.addEventListener('mouseUp',()=>{if(selected&&!restoring)commitHistory()});
 
 document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>addObject(b.dataset.add));
-document.querySelectorAll('.tool[data-tool]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tool[data-tool]').forEach(x=>x.classList.remove('active'));b.classList.add('active');transform.setMode(b.dataset.tool==='select'?'translate':b.dataset.tool);status(b.dataset.tool==='select'?'Selection tool':b.dataset.tool+' tool');});
-renderer.domElement.addEventListener('pointerdown',e=>{if(e.button!==0)return;const r=renderer.domElement.getBoundingClientRect();const mouse=new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);const ray=new THREE.Raycaster();ray.setFromCamera(mouse,camera);const hit=ray.intersectObjects(objects,false)[0]; if(hit)select(hit.object);});
-function snapshot(){return objects.map(o=>({name:o.name,pos:o.position.toArray(),rot:o.rotation.toArray(),scale:o.scale.toArray(),type:o.geometry.type}));}
-function pushHistory(){history.push(JSON.stringify(snapshot()));if(history.length>30)history.shift();future=[];}
-function restore(s){objects.splice(0).forEach(()=>{});scene.traverse(o=>{if(o.isMesh&&objects.includes(o))scene.remove(o)});/* state restoration is expanded in later editor modules */}
-function runMenu(a){menuPanel.classList.add('hidden'); if(a==='New'){objects.slice().forEach(o=>scene.remove(o));objects.length=0;select(null);status('New scene');}else if(a==='Delete'){if(selected){scene.remove(selected);objects.splice(objects.indexOf(selected),1);select(null);pushHistory();status('Deleted object')}}else if(a==='Duplicate'){if(selected){const c=selected.clone();c.material=selected.material.clone();c.position.x+=.5;c.name=selected.name+' Copy';scene.add(c);objects.push(c);select(c);pushHistory();}}else if(a==='Select All'){select(objects[0]);status(`${objects.length} object(s) in scene`)}else if(a==='Grid'){grid.visible=!grid.visible}else if(a==='Axes'){axes.visible=!axes.visible}else if(a==='Top View'){camera.position.set(0,12,0);orbit.target.set(0,0,0)}else if(a==='Front View'){camera.position.set(0,3,12);orbit.target.set(0,1,0)}else if(a==='Right View'){camera.position.set(12,3,0);orbit.target.set(0,1,0)}else if(a==='Home View'){camera.position.set(7,6,9);orbit.target.set(0,1,0)}else if(['Box','Sphere','Cylinder','Cone','Torus','Plane'].includes(a))addObject(a.toLowerCase());else if(a==='Save')saveScene();else if(a==='Export')exportScene();else status(a+' is in the editor roadmap');}
+document.querySelectorAll('.tool[data-tool]').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('.tool[data-tool]').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+ transform.setMode(b.dataset.tool==='select'?'translate':b.dataset.tool); status(b.dataset.tool==='select'?'Selection tool':b.dataset.tool+' tool');
+});
+renderer.domElement.addEventListener('pointerdown',e=>{
+ if(e.button!==0)return;
+ const r=renderer.domElement.getBoundingClientRect();
+ const mouse=new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);
+ const ray=new THREE.Raycaster(); ray.setFromCamera(mouse,camera);
+ const hit=ray.intersectObjects(objects,false)[0];
+ if(hit)select(hit.object); else if(!e.ctrlKey&&!e.metaKey)select(null);
+});
+
+function snapshot(){return objects.map(o=>({name:o.name,pos:o.position.toArray(),rot:o.rotation.toArray(),scale:o.scale.toArray(),type:typeFromGeometry(o.geometry),color:o.material?.color?.getHex()??0x9aa3ad,visible:o.visible}));}
+function commitHistory(){
+ if(restoring)return;
+ const state=JSON.stringify(snapshot());
+ if(history[historyIndex]===state)return;
+ history=history.slice(0,historyIndex+1); history.push(state);
+ if(history.length>40)history.shift();
+ historyIndex=history.length-1;
+ updateHistoryButtons();
+}
+function restore(state){
+ restoring=true;
+ transform.detach(); objects.forEach(o=>{scene.remove(o);o.geometry.dispose();if(o.material?.dispose)o.material.dispose()});
+ objects.length=0;
+ const data=JSON.parse(state||'[]');
+ data.forEach(d=>{
+  const m=new THREE.Mesh(geometryFor(d.type),materialFor(d.color));
+  m.name=d.name; m.position.fromArray(d.pos); m.rotation.fromArray(d.rot); m.scale.fromArray(d.scale); m.visible=d.visible!==false;
+  m.castShadow=true;m.receiveShadow=true;scene.add(m);objects.push(m);
+ });
+ selected=null;selectedSet.clear();restoring=false;updateList();updateProperties();updateInputs();
+}
+function undo(){if(historyIndex<=0){status('Nothing to undo');return}historyIndex--;restore(history[historyIndex]);updateHistoryButtons();status('Undo');}
+function redo(){if(historyIndex>=history.length-1){status('Nothing to redo');return}historyIndex++;restore(history[historyIndex]);updateHistoryButtons();status('Redo');}
+function updateHistoryButtons(){document.querySelector('#undoBtn').disabled=historyIndex<=0;document.querySelector('#redoBtn').disabled=historyIndex<0||historyIndex>=history.length-1;}
+
+function deleteSelected(){
+ if(!selectedSet.size){status('Nothing selected');return}
+ [...selectedSet].forEach(o=>{scene.remove(o);const i=objects.indexOf(o);if(i>=0)objects.splice(i,1);});
+ selected=null;selectedSet.clear();transform.detach();commitHistory();updateList();updateProperties();status('Deleted selected object(s)');
+}
+function duplicateSelected(){
+ if(!selectedSet.size){status('Nothing selected');return}
+ const copies=[];
+ [...selectedSet].forEach(o=>{const c=o.clone();c.material=o.material.clone();c.position.x+=.5;c.position.z+=.5;c.name=o.name+' Copy';scene.add(c);objects.push(c);copies.push(c)});
+ selectMany(copies);commitHistory();status('Duplicated '+copies.length+' object(s)');
+}
+function clearScene(){objects.slice().forEach(o=>{scene.remove(o);o.geometry.dispose();if(o.material?.dispose)o.material.dispose()});objects.length=0;select(null);commitHistory();status('New scene');}
 function saveScene(){localStorage.setItem('3d-builder-scene',JSON.stringify(snapshot()));status('Scene saved locally');}
 function exportScene(){const data=JSON.stringify(snapshot(),null,2);const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));a.download='3d-builder-scene.json';a.click();URL.revokeObjectURL(a.href);status('Scene exported');}
-document.querySelector('#saveBtn').onclick=saveScene;document.querySelector('#undoBtn').onclick=()=>status('Undo system reserved for full history module');document.querySelector('#redoBtn').onclick=()=>status('Redo system reserved for full history module');document.querySelector('#gridBtn').onclick=()=>grid.visible=!grid.visible;document.querySelector('#frameBtn').onclick=()=>{if(selected){const box=new THREE.Box3().setFromObject(selected);const c=box.getCenter(new THREE.Vector3());orbit.target.copy(c);camera.position.copy(c.clone().add(new THREE.Vector3(5,4,6)));}};
+
+function runMenu(a){
+ menuPanel.classList.add('hidden');
+ if(a==='New')clearScene();
+ else if(a==='Undo')undo();
+ else if(a==='Redo')redo();
+ else if(a==='Delete')deleteSelected();
+ else if(a==='Duplicate')duplicateSelected();
+ else if(a==='Select All'){selectMany(objects);status(`${objects.length} object(s) selected`)}
+ else if(a==='Clear Selection')select(null);
+ else if(a==='Grid'){grid.visible=!grid.visible}
+ else if(a==='Axes'){axes.visible=!axes.visible}
+ else if(a==='Top View'){camera.position.set(0,12,0);orbit.target.set(0,0,0);status('Top view')}
+ else if(a==='Front View'){camera.position.set(0,3,12);orbit.target.set(0,1,0);status('Front view')}
+ else if(a==='Right View'){camera.position.set(12,3,0);orbit.target.set(0,1,0);status('Right view')}
+ else if(a==='Home View'){camera.position.set(7,6,9);orbit.target.set(0,1,0);status('Home view')}
+ else if(a==='Perspective'){camera=new THREE.PerspectiveCamera(55,viewport.clientWidth/viewport.clientHeight,.01,500);status('Perspective view')}
+ else if(['Box','Sphere','Cylinder','Cone','Torus','Plane'].includes(a))addObject(a.toLowerCase());
+ else if(a==='Save')saveScene(); else if(a==='Export')exportScene();
+ else status(a+' is in the editor roadmap');
+}
+
+document.querySelector('#saveBtn').onclick=saveScene;
+document.querySelector('#undoBtn').onclick=undo;
+document.querySelector('#redoBtn').onclick=redo;
+document.querySelector('#gridBtn').onclick=()=>grid.visible=!grid.visible;
+document.querySelector('#frameBtn').onclick=()=>{if(selected){const box=new THREE.Box3().setFromObject(selected);const c=box.getCenter(new THREE.Vector3());orbit.target.copy(c);camera.position.copy(c.clone().add(new THREE.Vector3(5,4,6)));}};
+document.addEventListener('keydown',e=>{
+ if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName))return;
+ const mod=e.ctrlKey||e.metaKey;
+ if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();undo()}
+ else if(mod&&e.key.toLowerCase()==='y'){e.preventDefault();redo()}
+ else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicateSelected()}
+ else if(mod&&e.key.toLowerCase()==='a'){e.preventDefault();selectMany(objects)}
+ else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();deleteSelected()}
+ else if(e.key.toLowerCase()==='w'&&!mod)transform.setMode('translate');
+ else if(e.key.toLowerCase()==='e'&&!mod)transform.setMode('rotate');
+ else if(e.key.toLowerCase()==='r'&&!mod)transform.setMode('scale');
+});
 function status(t){document.querySelector('#statusText').textContent=t;}
-function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h)} addEventListener('resize',resize);resize();
+function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h)}
+addEventListener('resize',resize);resize();
+commitHistory();
 function animate(){requestAnimationFrame(animate);orbit.update();renderer.render(scene,camera)} animate();
