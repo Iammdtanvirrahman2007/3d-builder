@@ -7,11 +7,7 @@
   <link rel="icon" href="data:," />
   <link rel="stylesheet" href="style.css" />
   <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
-      }
-    }
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}
   </script>
 </head>
 <body>
@@ -46,9 +42,7 @@
     <section class="viewport-wrap">
       <div id="viewport" class="viewport"></div>
       <div class="toolbar">
-        <div class="tool-group main-tools">
-          <button class="tool active" data-tool="select">↖ Select</button><button class="tool" data-tool="move">✥ Move</button><button class="tool" data-tool="rotate">⟳ Rotate</button><button class="tool" data-tool="scale">↗ Scale</button>
-        </div>
+        <div class="tool-group main-tools"><button class="tool active" data-tool="select">↖ Select</button><button class="tool" data-tool="move">✥ Move</button><button class="tool" data-tool="rotate">⟳ Rotate</button><button class="tool" data-tool="scale">↗ Scale</button></div>
         <span id="scaleOptions" class="scale-options hidden"><button id="mirrorBtn" class="tool option-btn" type="button">Mirror: Off</button><button id="uniformBtn" class="tool option-btn" type="button">Uniform: Off</button></span>
         <span class="divider"></span><button id="frameBtn" class="tool utility-tool">⌗ Frame</button><button id="gridBtn" class="tool utility-tool">▦ Grid</button>
       </div>
@@ -56,22 +50,17 @@
     </section>
 
     <aside class="sidebar right">
-      <section class="panel-section">
-        <div class="section-title">Properties</div>
-        <div id="properties" class="properties"><div class="empty">Select an object</div></div>
-      </section>
+      <section class="panel-section"><div class="section-title">Properties</div><div id="properties" class="properties"><div class="empty">Select an object</div></div></section>
       <section class="panel-section appearance-section">
         <div class="section-title">Appearance</div>
         <div class="color-control"><div><span class="color-title">Object Color</span><span class="color-subtitle">Material</span></div><label class="color-picker"><input id="colorInput" type="color" value="#9aa3ad"><span class="color-swatch"></span></label></div>
         <div class="color-presets"><button data-color="#9aa3ad" title="Gray"></button><button data-color="#5b8def" title="Blue"></button><button data-color="#62b779" title="Green"></button><button data-color="#e6b35a" title="Gold"></button><button data-color="#d66b78" title="Red"></button><button data-color="#a477d4" title="Purple"></button></div>
       </section>
-      <section class="panel-section quick-section">
-        <div class="section-title">Quick Add</div>
-        <div class="quick-grid"><button data-add="box">▣ Box</button><button data-add="sphere">● Sphere</button><button data-add="cylinder">⬢ Cylinder</button><button data-add="cone">△ Cone</button><button data-add="torus">◎ Torus</button><button data-add="plane">□ Plane</button></div>
-      </section>
+      <section class="panel-section quick-section"><div class="section-title">Quick Add</div><div class="quick-grid"><button data-add="box">▣ Box</button><button data-add="sphere">● Sphere</button><button data-add="cylinder">⬢ Cylinder</button><button data-add="cone">△ Cone</button><button data-add="torus">◎ Torus</button><button data-add="plane">□ Plane</button></div></section>
     </aside>
   </main>
 
+  <script type="module" src="ui-color.js"></script>
   <script type="module" src="app.js"></script>
   <script type="module" src="scale-fix.js"></script>
 </body>
